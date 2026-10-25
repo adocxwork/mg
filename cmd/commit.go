@@ -1,0 +1,46 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+	"mgit/pkg/core"
+)
+
+var message string
+
+// commitCmd saves a snapshot of the staged files to repository history
+var commitCmd = &cobra.Command{
+	Use:   "commit",
+	Short: "Record changes to the repository",
+	Run: func(cmd *cobra.Command, args []string) {
+		repoRoot, err := core.GetRepoPath()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Fatal:", err)
+			os.Exit(1)
+		}
+
+		if message == "" {
+			fmt.Fprintln(os.Stderr, "Error: commit message is required")
+			os.Exit(1)
+		}
+
+		headHash, _ := core.GetHEADCommit(repoRoot)
+		var parents []string
+		if headHash != "" {
+			parents = []string{headHash}
+		}
+
+		if err := core.CreateCommit(repoRoot, message, parents); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(1)
+		}
+	},
+}
+
+func init() {
+	commitCmd.Flags().StringVarP(&message, "message", "m", "", "Commit message")
+	commitCmd.MarkFlagRequired("message")
+	rootCmd.AddCommand(commitCmd)
+}
